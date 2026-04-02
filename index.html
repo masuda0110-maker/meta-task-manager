@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meta-Task Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="css/style.css?v=20260403" />
+  <style>
+    /* === キャッシュ対策: 重要スタイル直接定義 === */
+    .modal-overlay.hidden, .hidden { display: none !important; }
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(17,24,39,.45);
+      backdrop-filter: blur(3px);
+      z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .modal {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.14), 0 4px 8px rgba(0,0,0,.06);
+      display: flex; flex-direction: column;
+      max-height: 90vh; overflow: hidden;
+    }
+    .modal-sm  { width: 440px; max-width: calc(100vw - 2rem); }
+    .modal-md  { width: 540px; max-width: calc(100vw - 2rem); }
+    .modal-lg  { width: 660px; max-width: calc(100vw - 2rem); }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.1rem 1.4rem;
+      border-bottom: 1px solid #e5e7eb;
+      font-weight: 700; font-size: .95rem;
+    }
+    .modal-header h3 { display: flex; align-items: center; gap: 8px; color: #111827; }
+    .modal-close {
+      color: #9ca3af; font-size: .85rem;
+      padding: 5px 8px; border-radius: 6px;
+      cursor: pointer; background: none; border: none;
+      transition: .15s ease;
+    }
+    .modal-close:hover { color: #111827; background: #eef0f5; }
+    .modal-body { padding: 1.2rem 1.4rem; overflow-y: auto; flex: 1; }
+    .modal-footer {
+      display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+      padding: .9rem 1.4rem;
+      border-top: 1px solid #e5e7eb;
+      background: #f7f8fa;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: .5rem 1.1rem;
+      background: #2563eb; color: #fff;
+      border-radius: 8px; border: none;
+      font-size: .8rem; font-weight: 600; cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: .5rem .95rem;
+      background: #fff; color: #4b5563;
+      border: 1px solid #e5e7eb; border-radius: 8px;
+      font-size: .8rem; font-weight: 500; cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-ghost:hover { border-color: #d1d5db; background: #f7f8fa; }
+    .btn-ghost.danger { color: #dc2626; }
+    .field-row { margin-bottom: .95rem; }
+    .field-row label { display: block; font-size: .75rem; font-weight: 600; color: #4b5563; margin-bottom: .38rem; }
+    .modal-input, .modal-select {
+      width: 100%; padding: .55rem .8rem;
+      border: 1px solid #e5e7eb; border-radius: 8px;
+      font-size: .84rem; font-family: inherit;
+      background: #fff; color: #111827;
+    }
+    .modal-input:focus, .modal-select:focus {
+      outline: none; border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.08);
+    }
+    .modal-input-sm {
+      padding: .44rem .7rem;
+      border: 1px solid #e5e7eb; border-radius: 8px;
+      font-size: .8rem; font-family: inherit;
+      background: #fff; color: #111827;
+    }
+    .settings-section { margin-bottom: 1.2rem; padding-bottom: 1.2rem; border-bottom: 1px solid #e5e7eb; }
+    .settings-section:last-child { border-bottom: none; margin-bottom: 0; }
+    .settings-section h4 { font-size: .8rem; font-weight: 700; color: #4b5563; margin-bottom: .8rem; display: flex; align-items: center; gap: 6px; }
+    .auth-tab {
+      background: transparent; border: none; color: #9ca3af;
+      cursor: pointer; font-weight: 600; font-size: .82rem;
+      padding: .4rem .8rem; border-radius: 6px; transition: .15s ease;
+    }
+    .auth-tab:hover { color: #111827; }
+    .auth-tab.active { background: #fff; color: #111827; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    /* Toast */
+    .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+    .toast { display: flex; align-items: center; gap: 9px; padding: .7rem 1.1rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.08); font-size: .8rem; color: #111827; min-width: 220px; animation: toastIn .2s ease; }
+    .toast.success { border-left: 3px solid #059669; }
+    .toast.error   { border-left: 3px solid #dc2626; }
+    .toast.info    { border-left: 3px solid #2563eb; }
+    @keyframes toastIn { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    /* Sidebar base */
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #f0f2f6; color: #111827; display: flex; height: 100vh; overflow: hidden; margin: 0; }
+    .sidebar { width: 240px; min-width: 240px; background: #1e2d4e; display: flex; flex-direction: column; overflow-y: auto; z-index: 100; }
+    .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 1.25rem 1.1rem 1rem; color: #fff; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: .5rem; }
+    .logo-icon { width: 32px; height: 32px; background: #2563eb; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: .88rem; color: #fff; flex-shrink: 0; }
+    .logo-text { font-size: .92rem; font-weight: 700; color: #fff; }
+    .quick-add-wrap { padding: .5rem .75rem .6rem; }
+    .quick-add-btn { width: 100%; display: flex; align-items: center; gap: 7px; padding: .55rem .9rem; background: rgba(255,255,255,.10); color: rgba(255,255,255,.9); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; font-size: .8rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .quick-add-btn:hover { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .sidebar-nav { flex: 1; padding: 0 .6rem; }
+    .nav-item { display: flex; align-items: center; gap: 9px; padding: .5rem .8rem; border-radius: 8px; font-size: .82rem; font-weight: 500; color: rgba(255,255,255,.85); text-decoration: none; margin-bottom: 1px; }
+    .nav-item i { width: 16px; text-align: center; font-size: .8rem; color: rgba(255,255,255,.45); }
+    .nav-item:hover { background: rgba(255,255,255,.08); color: #fff; }
+    .nav-item.active { background: #2563eb; color: #fff; font-weight: 600; }
+    .nav-item.active i { color: rgba(255,255,255,.9); }
+    .nav-badge { margin-left: auto; background: #2563eb; color: #fff; font-size: .64rem; font-weight: 700; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center; }
+    .nav-item.active .nav-badge { background: rgba(255,255,255,.25); }
+    .sidebar-section-label { font-size: .67rem; font-weight: 700; color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: .08em; padding: .8rem .8rem .3rem; }
+    .add-project-btn { display: flex; align-items: center; gap: 6px; width: 100%; padding: .42rem .8rem; font-size: .78rem; color: rgba(255,255,255,.45); border-radius: 8px; cursor: pointer; background: none; border: none; font-family: inherit; }
+    .add-project-btn:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.7); }
+    .sidebar-footer { display: flex; align-items: center; gap: 9px; padding: .85rem 1rem; border-top: 1px solid rgba(255,255,255,.08); margin-top: auto; }
+    .user-avatar { width: 32px; height: 32px; background: rgba(255,255,255,.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .78rem; color: rgba(255,255,255,.7); flex-shrink: 0; border: 1.5px solid rgba(255,255,255,.2); }
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-size: .78rem; font-weight: 600; color: rgba(255,255,255,.9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-streak { font-size: .68rem; color: rgba(255,255,255,.45); }
+    .settings-btn { color: rgba(255,255,255,.45); font-size: .82rem; padding: 5px; border-radius: 6px; cursor: pointer; background: none; border: none; }
+    .settings-btn:hover { color: rgba(255,255,255,.8); background: rgba(255,255,255,.08); }
+    .main-content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 1.75rem 2rem; background: #f0f2f6; }
+    .view { display: block; }
+    .view.hidden { display: none; }
+    /* nav-pulse */
+    @keyframes pulse2 { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:.6} }
+    .nav-pulse { width: 7px; height: 7px; background: #34d399; border-radius: 50%; margin-left: auto; animation: pulse2 2s infinite; }
+    /* Task items */
+    .task-item { display: flex; align-items: flex-start; gap: 10px; padding: .8rem 1rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 5px; }
+    .task-item:hover { border-color: #d1d5db; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    .task-title { font-size: .85rem; font-weight: 500; color: #111827; }
+    /* Cards */
+    .brief-card, .mc-chart-card, .mc-panel, .mc-full-panel, .mc-score-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; }
+    .view-title { font-size: 1.3rem; font-weight: 700; color: #111827; display: flex; align-items: center; gap: 9px; }
+  </style>
+</head>
+<body>
+  <!-- ===== MOBILE HEADER ===== -->
+  <div class="mobile-header" id="mobileHeader" style="display:none">
+    <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く">
+      <i class="fas fa-bars"></i>
+    </button>
+    <span class="mobile-logo"><i class="fas fa-brain"></i> Meta-Task</span>
+  </div>
+  <!-- ===== SIDEBAR OVERLAY ===== -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" id="sidebar" style="display:none">
+    <div class="sidebar-logo">
+      <span class="logo-icon"><i class="fas fa-brain"></i></span>
+      <span class="logo-text">Meta-Task</span>
+    </div>
+
+    <!-- Quick Add -->
+    <div class="quick-add-wrap">
+      <button class="quick-add-btn" id="quickAddBtn">
+        <i class="fas fa-plus"></i>
+        <span>クイック追加</span>
+      </button>
+    </div>
+
+    <!-- Nav -->
+    <nav class="sidebar-nav">
+      <ul>
+        <li><a href="#" class="nav-item active" data-view="briefing">
+          <i class="fas fa-sun"></i><span>今日のブリーフィング</span>
+        </a></li>
+        <li><a href="#" class="nav-item" data-view="today">
+          <i class="fas fa-calendar-day"></i><span>今日</span>
+          <span class="nav-badge" id="todayBadge">0</span>
+        </a></li>
+        <li><a href="#" class="nav-item" data-view="upcoming">
+          <i class="fas fa-calendar-week"></i><span>近日予定</span>
+        </a></li>
+        <li><a href="#" class="nav-item" data-view="metacog">
+          <i class="fas fa-brain"></i><span>メタ認知ダッシュボード</span>
+          <span class="nav-badge" id="metacogBadge" style="display:none;background:var(--accent2)"></span>
+        </a></li>
+        <li><a href="#" class="nav-item" data-view="coach">
+          <i class="fas fa-comments"></i><span>AIメンタリングコーチ</span>
+          <span class="nav-pulse" id="coachPulse"></span>
+        </a></li>
+      </ul>
+
+      <div class="sidebar-section-label">プロジェクト</div>
+      <ul id="projectNavList"></ul>
+      <button class="add-project-btn" id="addProjectBtn">
+        <i class="fas fa-plus"></i> プロジェクト追加
+      </button>
+    </nav>
+
+    <!-- User -->
+    <div class="sidebar-footer">
+      <div class="user-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
+      <div class="user-info">
+        <div class="user-name" id="userNameDisplay">あなた</div>
+        <div class="user-streak"><i class="fas fa-fire"></i> <span id="streakCount">0</span>日連続</div>
+      </div>
+      <button class="settings-btn" id="logoutBtn" title="ログアウト" style="display:none"><i class="fas fa-sign-out-alt"></i></button>
+      <button class="settings-btn" id="settingsBtn" title="設定"><i class="fas fa-cog"></i></button>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="main-content" id="mainContent" style="display:none">
+
+    <!-- ========== VIEW: BRIEFING ========== -->
+    <section class="view" id="view-briefing">
+      <div class="briefing-header">
+        <div class="briefing-greeting" id="briefingGreeting"></div>
+        <div class="briefing-date" id="briefingDate"></div>
+      </div>
+
+      <!-- Morning / Evening toggle -->
+      <div class="briefing-toggle">
+        <button class="brief-tab active" id="tabMorning" data-tab="morning">
+          <i class="fas fa-sun"></i> 朝のブリーフィング
+        </button>
+        <button class="brief-tab" id="tabEvening" data-tab="evening">
+          <i class="fas fa-moon"></i> 夜の振り返り
+        </button>
+      </div>
+
+      <!-- Morning Panel -->
+      <div class="brief-panel" id="panelMorning">
+        <div class="brief-section">
+          <h3><i class="fas fa-fire text-p1"></i> 今日の最重要タスク (P1)</h3>
+          <div id="morningP1Tasks" class="brief-task-list"></div>
+        </div>
+        <div class="brief-section">
+          <h3><i class="fas fa-exclamation-circle text-warning"></i> 現状の課題・ボトルネック</h3>
+          <div id="morningChallenges" class="challenges-box"></div>
+        </div>
+        <div class="brief-section">
+          <h3><i class="fas fa-arrow-right text-accent"></i> 推奨 NEXTタスク</h3>
+          <div id="morningNextTasks" class="next-tasks-list"></div>
+        </div>
+        <div class="brief-section">
+          <button class="coach-start-btn" id="startMorningCoach">
+            <i class="fas fa-comments"></i> AIコーチと朝の目標設定をする
+          </button>
+        </div>
+      </div>
+
+      <!-- Evening Panel -->
+      <div class="brief-panel hidden" id="panelEvening">
+        <div class="brief-section">
+          <h3><i class="fas fa-check-circle text-success"></i> 今日の完了タスク</h3>
+          <div id="eveningCompleted" class="brief-task-list"></div>
+        </div>
+        <div class="brief-section">
+          <h3><i class="fas fa-clock text-warning"></i> 未完了・持ち越しタスク</h3>
+          <div id="eveningPending" class="brief-task-list"></div>
+        </div>
+        <div class="brief-section">
+          <h3><i class="fas fa-lightbulb text-p1"></i> 明日へのNEXTタスク提案</h3>
+          <div id="eveningNextTasks" class="next-tasks-list"></div>
+        </div>
+        <div class="brief-section">
+          <button class="coach-start-btn" id="startEveningCoach">
+            <i class="fas fa-brain"></i> AIコーチと夜の振り返りをする
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== VIEW: TODAY ========== -->
+    <section class="view hidden" id="view-today">
+      <div class="view-header">
+        <h2 class="view-title"><i class="fas fa-calendar-day"></i> 今日</h2>
+        <div class="view-meta" id="todayMeta"></div>
+      </div>
+      <div class="task-input-area" id="todayInputArea">
+        <div class="task-input-row">
+          <input type="text" class="task-input" id="todayTaskInput"
+            placeholder="タスクを追加… 例:「明日10時に企画書作成 P1 #仕事 30分」" />
+          <button class="task-add-btn" id="todayAddBtn"><i class="fas fa-plus"></i></button>
+        </div>
+        <div class="input-hint">P1〜P4 で優先度 / #プロジェクト名 / 30分 で見積もり / 毎週月曜 で繰り返し</div>
+      </div>
+      <div class="priority-filter">
+        <button class="pf-btn active" data-pf="all">すべて</button>
+        <button class="pf-btn" data-pf="P1"><span class="p-dot p1"></span>P1</button>
+        <button class="pf-btn" data-pf="P2"><span class="p-dot p2"></span>P2</button>
+        <button class="pf-btn" data-pf="P3"><span class="p-dot p3"></span>P3</button>
+        <button class="pf-btn" data-pf="P4"><span class="p-dot p4"></span>P4</button>
+      </div>
+      <div class="task-list" id="todayTaskList"></div>
+    </section>
+
+    <!-- ========== VIEW: UPCOMING ========== -->
+    <section class="view hidden" id="view-upcoming">
+      <div class="view-header">
+        <h2 class="view-title"><i class="fas fa-calendar-week"></i> 近日予定</h2>
+      </div>
+      <div class="task-input-area">
+        <div class="task-input-row">
+          <input type="text" class="task-input" id="upcomingTaskInput"
+            placeholder="タスクを追加… 例:「来週月曜にMTG準備 P2 #仕事」" />
+          <button class="task-add-btn" id="upcomingAddBtn"><i class="fas fa-plus"></i></button>
+        </div>
+      </div>
+      <div class="upcoming-list" id="upcomingList"></div>
+    </section>
+
+    <!-- ========== VIEW: METACOG DASHBOARD ========== -->
+    <section class="view hidden" id="view-metacog">
+      <div class="view-header">
+        <h2 class="view-title"><i class="fas fa-brain"></i> メタ認知ダッシュボード</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div class="mc-period-selector">
+            <button class="mcperiod-btn active" data-period="week">今週</button>
+            <button class="mcperiod-btn" data-period="month">今月</button>
+            <button class="mcperiod-btn" data-period="all">全期間</button>
+          </div>
+          <button class="btn-primary" id="mcAddEntryBtn" style="font-size:.82rem">
+            <i class="fas fa-plus"></i> 記録する
+          </button>
+          <button class="btn-ghost" id="mcExportBtn" style="font-size:.82rem">
+            <i class="fas fa-download"></i> レポート出力
+          </button>
+        </div>
+      </div>
+
+      <!-- スコアサマリー行 -->
+      <div class="mc-score-row" id="mcScoreRow"></div>
+
+      <!-- グラフ行：集中度トレンド ＋ 思考癖レーダー -->
+      <div class="mc-charts-row">
+        <div class="mc-chart-card">
+          <h3 class="mc-card-title"><i class="fas fa-chart-line"></i> 集中度トレンド</h3>
+          <div style="height:180px;position:relative"><canvas id="focusTrendChart"></canvas></div>
+        </div>
+        <div class="mc-chart-card">
+          <h3 class="mc-card-title"><i class="fas fa-spider"></i> メタ認知レーダー</h3>
+          <div style="height:180px;position:relative"><canvas id="metacogRadarChart"></canvas></div>
+        </div>
+        <div class="mc-chart-card">
+          <h3 class="mc-card-title"><i class="fas fa-clock"></i> 時間見積もり精度</h3>
+          <div style="height:180px;position:relative"><canvas id="timeAccuracyChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- 思考癖パネル -->
+      <div class="mc-section-row">
+        <div class="mc-panel" id="mcThinkingPatterns">
+          <h3 class="mc-card-title"><i class="fas fa-lightbulb"></i> 思考癖・傾向分析</h3>
+          <div id="mcPatternList" class="mc-pattern-list"></div>
+        </div>
+        <div class="mc-panel" id="mcWeeklyInsights">
+          <h3 class="mc-card-title"><i class="fas fa-star"></i> 蓄積された気づき</h3>
+          <div id="mcInsightsList" class="mc-insights-list"></div>
+        </div>
+      </div>
+
+      <!-- 振り返りログ一覧 -->
+      <div class="mc-full-panel">
+        <div class="mc-log-header">
+          <h3 class="mc-card-title"><i class="fas fa-history"></i> 振り返りログ</h3>
+          <div class="mc-log-filter">
+            <button class="mc-filter-btn active" data-lf="all">すべて</button>
+            <button class="mc-filter-btn" data-lf="task_complete">タスク完了</button>
+            <button class="mc-filter-btn" data-lf="morning">朝セッション</button>
+            <button class="mc-filter-btn" data-lf="evening">夜の振り返り</button>
+          </div>
+        </div>
+        <div id="mcLogList" class="mc-log-list"></div>
+      </div>
+    </section>
+
+  <!-- MetaCog Entry Modal -->
+  <div class="modal-overlay hidden" id="metacogEntryModal">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3><i class="fas fa-brain"></i> メタ認知を記録する</h3>
+        <button class="modal-close" data-close="metacogEntryModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="metacogEntryBody">
+
+        <!-- タイプ選択 -->
+        <div class="field-row" style="margin-bottom:1.2rem">
+          <label>記録タイプ</label>
+          <div class="mc-type-selector" id="mcTypeSelector">
+            <button class="mc-type-btn active" data-mtype="task_complete"><i class="fas fa-check-circle"></i> タスク完了</button>
+            <button class="mc-type-btn" data-mtype="morning"><i class="fas fa-sun"></i> 朝セッション</button>
+            <button class="mc-type-btn" data-mtype="evening"><i class="fas fa-moon"></i> 夜の振り返り</button>
+            <button class="mc-type-btn" data-mtype="chat"><i class="fas fa-comments"></i> フリー</button>
+          </div>
+        </div>
+
+        <!-- タスク完了用フィールド -->
+        <div id="mcFieldsTaskComplete">
+          <div class="field-row">
+            <label>タスク名（任意）</label>
+            <input type="text" id="mcTaskTitle" class="modal-input" placeholder="完了したタスク名" />
+          </div>
+          <div class="mc-entry-block">
+            <label class="mc-entry-label">集中度</label>
+            <div class="mc-star-row" id="mcFocusStars">
+              <span class="mc-star" data-val="1">★</span>
+              <span class="mc-star" data-val="2">★</span>
+              <span class="mc-star" data-val="3">★</span>
+              <span class="mc-star" data-val="4">★</span>
+              <span class="mc-star" data-val="5">★</span>
+            </div>
+          </div>
+          <div class="mc-entry-block">
+            <label class="mc-entry-label">時間見積もり精度</label>
+            <div class="mc-option-row" id="mcTimeOptions">
+              <button class="mc-opt-btn" data-opt="早く終わった">⏩ 早く終わった</button>
+              <button class="mc-opt-btn" data-opt="ほぼ予定通り">✅ ほぼ予定通り</button>
+              <button class="mc-opt-btn" data-opt="少し超えた">⚠️ 少し超えた</button>
+              <button class="mc-opt-btn" data-opt="大幅に超えた">🚨 大幅に超えた</button>
+            </div>
+          </div>
+          <div class="mc-entry-block">
+            <label class="mc-entry-label">阻害要因（複数選択可）</label>
+            <div class="mc-option-row" id="mcBlockerOptions">
+              <button class="mc-opt-btn" data-opt="集中できなかった">😵 集中できなかった</button>
+              <button class="mc-opt-btn" data-opt="割り込みが多かった">🔔 割り込み</button>
+              <button class="mc-opt-btn" data-opt="情報が不足していた">📋 情報不足</button>
+              <button class="mc-opt-btn" data-opt="疲労">😴 疲労</button>
+              <button class="mc-opt-btn" data-opt="技術的な問題">🔧 技術的問題</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 共通：KPT / テキストフィールド -->
+        <div class="mc-entry-block">
+          <label class="mc-entry-label">学んだこと・気づき</label>
+          <textarea class="modal-textarea" id="mcLearning" placeholder="このセッションで気づいたことや学んだこと…" style="min-height:70px"></textarea>
+        </div>
+        <div class="mc-entry-block">
+          <label class="mc-entry-label">次回への意図（やり方を変えること）</label>
+          <textarea class="modal-textarea" id="mcIntent" placeholder="次回試したいこと、改善したいことは？" style="min-height:60px"></textarea>
+        </div>
+        <div class="mc-entry-block">
+          <label class="mc-entry-label">エネルギーレベル</label>
+          <div class="mc-option-row" id="mcEnergyOptions">
+            <button class="mc-opt-btn" data-opt="high">⚡ 高い</button>
+            <button class="mc-opt-btn" data-opt="medium">🟡 普通</button>
+            <button class="mc-opt-btn" data-opt="low">😓 低い</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" data-close="metacogEntryModal">キャンセル</button>
+        <button class="btn-primary" id="metacogEntrySaveBtn"><i class="fas fa-save"></i> 記録する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MetaCog Log Detail Modal -->
+  <div class="modal-overlay hidden" id="metacogDetailModal">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3><i class="fas fa-brain"></i> 振り返りログ詳細</h3>
+        <button class="modal-close" data-close="metacogDetailModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="metacogDetailBody"></div>
+      <div class="modal-footer">
+        <button class="btn-ghost danger" id="metacogDetailDeleteBtn"><i class="fas fa-trash"></i> 削除</button>
+        <button class="btn-ghost" data-close="metacogDetailModal">閃じる</button>
+      </div>
+    </div>
+  </div>
+
+    <!-- ========== VIEW: AI COACH ========== -->
+    <section class="view hidden" id="view-coach">
+      <div class="coach-layout">
+        <!-- Chat area -->
+        <div class="coach-main">
+          <div class="coach-header">
+            <div class="coach-avatar-wrap">
+              <div class="coach-avatar"><i class="fas fa-brain"></i></div>
+              <div class="coach-status-dot"></div>
+            </div>
+            <div>
+              <div class="coach-name">Meta Coach</div>
+              <div class="coach-subtitle">AIメンタリングコーチ</div>
+            </div>
+            <div class="coach-mode-selector" id="coachModeSelector">
+              <button class="mode-btn active" data-mode="free">フリー相談</button>
+              <button class="mode-btn" data-mode="morning">朝セッション</button>
+              <button class="mode-btn" data-mode="evening">夜の振り返り</button>
+              <button class="mode-btn" data-mode="task">タスク完了後</button>
+              <button class="mode-btn metacog-mode" data-mode="metacog"><i class="fas fa-brain"></i> メタ認知</button>
+            </div>
+          </div>
+
+          <div class="coach-messages" id="coachMessages"></div>
+
+          <div class="coach-input-area">
+            <div class="coach-suggestions" id="coachSuggestions"></div>
+            <div class="coach-input-row">
+              <textarea class="coach-input" id="coachInput"
+                placeholder="コーチに話しかける…" rows="1"></textarea>
+              <button class="coach-send-btn" id="coachSendBtn">
+                <i class="fas fa-paper-plane"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Insights sidebar -->
+        <div class="coach-insights">
+          <h3><i class="fas fa-lightbulb"></i> 蓄積された洞察</h3>
+          <div class="insight-tabs">
+            <button class="insight-tab active" data-itab="week">今週</button>
+            <button class="insight-tab" data-itab="month">今月</button>
+          </div>
+          <div id="insightList" class="insight-list"></div>
+
+          <h3 style="margin-top:1.5rem"><i class="fas fa-chart-radar"></i> 成長トレンド</h3>
+          <div style="height:200px; position:relative">
+            <canvas id="growthChart"></canvas>
+          </div>
+
+          <h3 style="margin-top:1.5rem"><i class="fas fa-history"></i> セッション履歴</h3>
+          <div id="sessionHistory" class="session-history"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== VIEW: PROJECT ========== -->
+    <section class="view hidden" id="view-project">
+      <div class="view-header">
+        <h2 class="view-title" id="projectViewTitle"></h2>
+        <div class="project-actions">
+          <button class="btn-ghost" id="editProjectBtn"><i class="fas fa-edit"></i></button>
+          <button class="btn-ghost danger" id="deleteProjectBtn"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+
+      <!-- Project Tab Switcher -->
+      <div class="project-tab-bar">
+        <button class="proj-tab active" data-ptab="tasks">
+          <i class="fas fa-tasks"></i> タスク一覧
+        </button>
+        <button class="proj-tab" data-ptab="wbs">
+          <i class="fas fa-sitemap"></i> WBS
+        </button>
+      </div>
+
+      <!-- Tasks Panel -->
+      <div id="projPanelTasks">
+        <div class="task-input-area">
+          <div class="task-input-row">
+            <input type="text" class="task-input" id="projectTaskInput" placeholder="タスクを追加… 例:「明日P1 資料作成 60分」" />
+            <button class="task-add-btn" id="projectAddBtn"><i class="fas fa-plus"></i></button>
+          </div>
+        </div>
+        <div class="priority-filter" style="margin-bottom:.8rem">
+          <button class="pf-btn active" data-pjf="all">すべて</button>
+          <button class="pf-btn" data-pjf="P1"><span class="p-dot p1"></span>P1</button>
+          <button class="pf-btn" data-pjf="P2"><span class="p-dot p2"></span>P2</button>
+          <button class="pf-btn" data-pjf="P3"><span class="p-dot p3"></span>P3</button>
+          <button class="pf-btn" data-pjf="P4"><span class="p-dot p4"></span>P4</button>
+        </div>
+        <div class="task-list" id="projectTaskList"></div>
+      </div>
+
+      <!-- WBS Panel -->
+      <div id="projPanelWbs" class="hidden">
+        <div class="wbs-header" id="wbsHeader"></div>
+        <div class="wbs-stats" id="wbsStats"></div>
+        <div class="wbs-body" id="wbsTreeBody"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== MODALS ===== -->
+
+  <!-- Quick Add Modal -->
+  <div class="modal-overlay hidden" id="quickAddModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3><i class="fas fa-plus-circle"></i> クイックタスク追加</h3>
+        <button class="modal-close" data-close="quickAddModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" class="modal-input" id="quickAddInput"
+          placeholder="例: 明日10時に企画書作成 P1 #仕事 60分" autofocus />
+        <div class="quick-parse-preview" id="quickParsePreview"></div>
+        <div class="quick-add-fields">
+          <div class="field-row">
+            <label>プロジェクト</label>
+            <select id="qaProject" class="modal-select"></select>
+          </div>
+          <div class="field-row">
+            <label>期日</label>
+            <input type="datetime-local" id="qaDueDate" class="modal-input-sm" />
+          </div>
+          <div class="field-row">
+            <label>見積もり</label>
+            <input type="number" id="qaEstimate" class="modal-input-sm" placeholder="分" />
+          </div>
+          <div class="field-row">
+            <label>繰り返し</label>
+            <select id="qaRecur" class="modal-select">
+              <option value="">なし</option>
+              <option value="daily">毎日</option>
+              <option value="weekday">平日毎日</option>
+              <option value="weekly">毎週</option>
+              <option value="monthly">毎月</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" data-close="quickAddModal">キャンセル</button>
+        <button class="btn-primary" id="quickAddSubmit"><i class="fas fa-plus"></i> 追加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Detail Modal -->
+  <div class="modal-overlay hidden" id="taskDetailModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3><i class="fas fa-tasks"></i> タスク詳細</h3>
+        <button class="modal-close" data-close="taskDetailModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="taskDetailBody"></div>
+      <div class="modal-footer">
+        <button class="btn-ghost danger" id="taskDeleteBtn"><i class="fas fa-trash"></i> 削除</button>
+        <button class="btn-ghost" data-close="taskDetailModal">閉じる</button>
+        <button class="btn-primary" id="taskSaveBtn"><i class="fas fa-save"></i> 保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Project Modal -->
+  <div class="modal-overlay hidden" id="projectModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 id="projectModalTitle"><i class="fas fa-folder-plus"></i> プロジェクト作成</h3>
+        <button class="modal-close" data-close="projectModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="field-row">
+          <label>プロジェクト名</label>
+          <input type="text" id="pmName" class="modal-input" placeholder="プロジェクト名" />
+        </div>
+        <div class="field-row">
+          <label>カラー</label>
+          <div class="color-picker" id="pmColorPicker"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" data-close="projectModal">キャンセル</button>
+        <button class="btn-primary" id="projectSaveBtn">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slack / Calendar Modal -->
+  <div class="modal-overlay hidden" id="integrationModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 id="integrationModalTitle"></h3>
+        <button class="modal-close" data-close="integrationModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="integrationModalBody"></div>
+      <div class="modal-footer">
+        <button class="btn-ghost" data-close="integrationModal">キャンセル</button>
+        <button class="btn-primary" id="integrationConfirmBtn">実行</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reflection Modal (task complete) -->
+  <div class="modal-overlay hidden" id="reflectionModal">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3><i class="fas fa-brain"></i> タスク完了 — メタ認知チェック</h3>
+        <button class="modal-close" data-close="reflectionModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="reflectionBody"></div>
+      <div class="modal-footer">
+        <button class="btn-ghost" data-close="reflectionModal">スキップ</button>
+        <button class="btn-primary" id="reflectionSubmit"><i class="fas fa-brain"></i> コーチに相談する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay hidden" id="settingsModal">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3><i class="fas fa-cog"></i> 設定</h3>
+        <button class="modal-close" data-close="settingsModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <!-- Claude AI設定 -->
+        <div class="settings-section">
+          <h4><i class="fas fa-robot"></i> AIコーチ（Claude API）</h4>
+          <div class="field-row">
+            <p style="font-size:.78rem;color:var(--text-secondary);margin:0 0 .6rem;padding:.5rem .7rem;background:var(--accent-soft);border-radius:8px;border-left:3px solid var(--accent)">
+              <i class="fas fa-shield-alt" style="color:var(--accent)"></i>
+              APIキーはサーバー側（Vercel環境変数）で安全に管理されています
+            </p>
+          </div>
+          <div class="field-row">
+            <label>AIモデル</label>
+            <select id="claudeModel" class="modal-input">
+              <option value="claude-sonnet-4-6">Claude Sonnet 4.6（推奨・バランス型）</option>
+              <option value="claude-opus-4-6">Claude Opus 4.6（最高品質）</option>
+              <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5（高速・軽量）</option>
+            </select>
+          </div>
+          <div id="claudeStatus" style="font-size:.78rem;padding:.4rem .6rem;border-radius:var(--radius-sm);display:none"></div>
+        </div>
+
+        <div class="settings-section">
+          <h4><i class="fab fa-slack"></i> Slack連携</h4>
+          <div class="field-row">
+            <label>Webhook URL</label>
+            <input type="text" id="slackWebhook" class="modal-input" placeholder="https://hooks.slack.com/..." />
+          </div>
+          <div class="field-row">
+            <label>朝の通知時刻</label>
+            <input type="time" id="morningTime" class="modal-input-sm" value="08:00" />
+          </div>
+          <div class="field-row">
+            <label>夜の通知時刻</label>
+            <input type="time" id="eveningTime" class="modal-input-sm" value="21:00" />
+          </div>
+        </div>
+        <div class="settings-section">
+          <h4><i class="fas fa-user-circle"></i> ユーザー設定</h4>
+          <div class="field-row">
+            <label>名前</label>
+            <input type="text" id="settingsName" class="modal-input" placeholder="あなたの名前" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" data-close="settingsModal">キャンセル</button>
+        <button class="btn-primary" id="settingsSaveBtn">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WBS Node Modal -->
+  <div class="modal-overlay hidden" id="wbsNodeModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3 id="wbsNodeModalTitle"><i class="fas fa-sitemap"></i> WBSノード</h3>
+        <button class="modal-close" data-close="wbsNodeModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="wbsNodeModalBody"></div>
+      <div class="modal-footer">
+        <button class="btn-ghost" data-close="wbsNodeModal">キャンセル</button>
+        <button class="btn-primary" id="wbsSaveNodeBtn"><i class="fas fa-save"></i> 保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ========== ログイン / サインアップ モーダル ========== -->
+  <div class="modal-overlay" id="authModal" style="z-index:10000;position:fixed;inset:0;background:rgba(17,24,39,.45);display:flex;align-items:center;justify-content:center;padding:1rem">
+    <div class="modal modal-sm">
+      <div class="modal-header" style="border-bottom:none;padding-bottom:0">
+        <div style="display:flex;flex-direction:column;align-items:center;width:100%;gap:8px;padding:.5rem 0">
+          <div style="width:52px;height:52px;background:linear-gradient(135deg,#2563eb,#7c3aed);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 4px 16px rgba(37,99,235,0.3)">🧠</div>
+          <div style="font-size:1.1rem;font-weight:700">Meta-Task Manager</div>
+        </div>
+      </div>
+      <div class="modal-body" style="padding-top:.5rem">
+        <!-- タブ -->
+        <div style="display:flex;gap:4px;background:#f0f2f6;border-radius:8px;padding:3px;margin-bottom:1.2rem">
+          <button class="auth-tab active" id="authTabLogin" style="flex:1;padding:.42rem;border-radius:6px;font-size:.83rem;font-weight:600">ログイン</button>
+          <button class="auth-tab" id="authTabSignup" style="flex:1;padding:.42rem;border-radius:6px;font-size:.83rem;font-weight:600">新規登録</button>
+        </div>
+
+        <div class="field-row">
+          <label>メールアドレス</label>
+          <input type="email" id="authEmail" class="modal-input" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <div class="field-row">
+          <label>パスワード</label>
+          <input type="password" id="authPassword" class="modal-input" placeholder="8文字以上" autocomplete="current-password" />
+        </div>
+        <!-- Supabase キー未設定警告 -->
+        <div id="authKeyWarning" style="display:none;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.65rem .85rem;margin-bottom:.8rem;font-size:.78rem;color:#92400e">
+          <div style="font-weight:700;margin-bottom:4px">⚠️ Supabase APIキーが未設定です</div>
+          <div style="margin-bottom:6px">Supabase → Settings → API → <b>anon public</b> の <code style="background:#fef3c7;padding:1px 4px;border-radius:3px">eyJh...</code> で始まるキーを入力してください。</div>
+          <input type="text" id="authAnonKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." 
+            style="width:100%;padding:.42rem .65rem;border:1px solid #fcd34d;border-radius:6px;font-size:.76rem;font-family:monospace;background:#fff;color:#111" />
+          <button id="authSaveKeyBtn" style="margin-top:6px;width:100%;padding:.38rem;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer">
+            キーを保存してリロード
+          </button>
+        </div>
+
+        <div id="authError" style="display:none"></div>
+        <div id="authSuccess" style="display:none"></div>
+      </div>
+      <div class="modal-footer" style="flex-direction:column;gap:8px">
+        <button class="btn-primary" id="authSubmitBtn" style="width:100%;justify-content:center">
+          <i class="fas fa-sign-in-alt"></i> <span id="authSubmitLabel">ログイン</span>
+        </button>
+        <button class="btn-ghost" id="authSkipBtn" style="width:100%;justify-content:center;font-size:.78rem">
+          ログインせずに使う（データはこのブラウザのみ）
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/supabase.js?v=20260402"></script>
+  <script src="js/auth.js?v=20260402"></script>
+  <script src="js/config.js?v=20260403"></script>
+  <script src="js/data.js?v=20260402"></script>
+  <script src="js/nlp.js?v=20260402"></script>
+  <script src="js/tasks.js?v=20260402"></script>
+  <script src="js/wbs.js?v=20260402"></script>
+  <script src="js/metacog.js?v=20260402"></script>
+  <script src="js/claude.js?v=20260403"></script>
+  <script src="js/coach.js?v=20260402"></script>
+  <script src="js/briefing.js?v=20260402"></script>
+  <script src="js/ui.js?v=20260402"></script>
+  <script src="js/app.js?v=20260402"></script>
+</body>
+</html>
