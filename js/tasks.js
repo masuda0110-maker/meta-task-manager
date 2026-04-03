@@ -4,6 +4,8 @@
 const Tasks = {
   currentFilter: 'all',
   currentProjectId: null,
+  selectedIds: new Set(),
+  bulkMode: false,
 
   /* ---- Render task list ---- */
   renderList(container, tasks, options = {}) {
@@ -24,7 +26,8 @@ const Tasks = {
 
   renderTaskItem(task, options = {}) {
     const el = document.createElement('div');
-    el.className = `task-item${task.is_completed ? ' completed' : ''}`;
+    const isSelected = this.bulkMode && this.selectedIds.has(task.id);
+    el.className = `task-item${task.is_completed ? ' completed' : ''}${isSelected ? ' bulk-selected' : ''}`;
     el.dataset.id = task.id;
 
     const project = task.project_id ? Store.getProjectById(task.project_id) : null;
@@ -32,6 +35,7 @@ const Tasks = {
     const dueFmt  = task.due_date ? this.formatDueDate(new Date(task.due_date)) : null;
 
     el.innerHTML = `
+      ${this.bulkMode ? `<div class="task-select-check ${isSelected ? 'checked' : ''}">${isSelected ? '<i class="fas fa-check"></i>' : ''}</div>` : ''}
       <div class="task-checkbox ${prio.toLowerCase()} ${task.is_completed ? 'checked' : ''}"
            data-id="${task.id}"></div>
       <div class="task-body">
@@ -54,45 +58,151 @@ const Tasks = {
               </div>`).join('')}
           </div>` : ''}
       </div>
+      ${!this.bulkMode ? `
       <div class="task-actions">
         <button class="task-action-btn cal"   title="カレンダー登録"  data-action="cal"   data-id="${task.id}"><i class="fas fa-calendar-plus"></i></button>
         <button class="task-action-btn slack" title="Slack通知"       data-action="slack" data-id="${task.id}"><i class="fab fa-slack"></i></button>
         <button class="task-action-btn"       title="詳細"            data-action="detail" data-id="${task.id}"><i class="fas fa-ellipsis-h"></i></button>
         <button class="task-action-btn del"   title="削除"            data-action="del"   data-id="${task.id}"><i class="fas fa-trash"></i></button>
-      </div>
+      </div>` : ''}
     `;
 
     // Checkbox toggle
     el.querySelector('.task-checkbox').addEventListener('click', e => {
       e.stopPropagation();
-      this.toggleComplete(task.id, task.is_completed);
+      if (this.bulkMode) {
+        this.toggleSelect(task.id);
+      } else {
+        this.toggleComplete(task.id, task.is_completed);
+      }
     });
 
-    // Subtask checkbox
-    el.querySelectorAll('.subtask-check').forEach(sc => {
-      sc.addEventListener('click', e => {
-        e.stopPropagation();
-        this.toggleSubtask(task.id, parseInt(sc.dataset.sub));
+    // Subtask checkbox (non-bulk only)
+    if (!this.bulkMode) {
+      el.querySelectorAll('.subtask-check').forEach(sc => {
+        sc.addEventListener('click', e => {
+          e.stopPropagation();
+          this.toggleSubtask(task.id, parseInt(sc.dataset.sub));
+        });
       });
-    });
 
-    // Action buttons
-    el.querySelectorAll('[data-action]').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        const action = btn.dataset.action;
-        const id = btn.dataset.id;
-        if (action === 'del')    this.deleteTaskUI(id);
-        if (action === 'detail') this.openDetail(id);
-        if (action === 'cal')    Integration.openCalendar(id);
-        if (action === 'slack')  Integration.openSlack(id);
+      // Action buttons
+      el.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          const action = btn.dataset.action;
+          const id = btn.dataset.id;
+          if (action === 'del')    this.deleteTaskUI(id);
+          if (action === 'detail') this.openDetail(id);
+          if (action === 'cal')    Integration.openCalendar(id);
+          if (action === 'slack')  Integration.openSlack(id);
+        });
       });
-    });
+    }
 
-    // Click => detail
-    el.addEventListener('click', () => this.openDetail(task.id));
+    // Click handler
+    el.addEventListener('click', () => {
+      if (this.bulkMode) {
+        this.toggleSelect(task.id);
+      } else {
+        this.openDetail(task.id);
+      }
+    });
 
     return el;
+  },
+
+  /* ---- Bulk selection ---- */
+  enterBulkMode() {
+    this.bulkMode = true;
+    this.selectedIds.clear();
+    App.refreshCurrentView();
+    document.querySelectorAll('.bulk-select-btn').forEach(btn => {
+      btn.innerHTML = '<i class="fas fa-times"></i> キャンセル';
+      btn.classList.add('active');
+    });
+  },
+
+  exitBulkMode() {
+    this.bulkMode = false;
+    this.selectedIds.clear();
+    this.updateBulkBar();
+    App.refreshCurrentView();
+    document.querySelectorAll('.bulk-select-btn').forEach(btn => {
+      btn.innerHTML = '<i class="fas fa-check-square"></i> 選択';
+      btn.classList.remove('active');
+    });
+  },
+
+  toggleSelect(id) {
+    if (this.selectedIds.has(id)) {
+      this.selectedIds.delete(id);
+    } else {
+      this.selectedIds.add(id);
+    }
+    const isSelected = this.selectedIds.has(id);
+    const el = document.querySelector(`.task-item[data-id="${id}"]`);
+    if (el) {
+      el.classList.toggle('bulk-selected', isSelected);
+      const check = el.querySelector('.task-select-check');
+      if (check) {
+        check.classList.toggle('checked', isSelected);
+        check.innerHTML = isSelected ? '<i class="fas fa-check"></i>' : '';
+      }
+    }
+    this.updateBulkBar();
+  },
+
+  selectAll() {
+    const items = [...document.querySelectorAll('.task-item[data-id]')];
+    const allSelected = items.length > 0 && items.every(el => this.selectedIds.has(el.dataset.id));
+    if (allSelected) {
+      this.selectedIds.clear();
+    } else {
+      items.forEach(el => this.selectedIds.add(el.dataset.id));
+    }
+    items.forEach(el => {
+      const isSelected = this.selectedIds.has(el.dataset.id);
+      el.classList.toggle('bulk-selected', isSelected);
+      const check = el.querySelector('.task-select-check');
+      if (check) {
+        check.classList.toggle('checked', isSelected);
+        check.innerHTML = isSelected ? '<i class="fas fa-check"></i>' : '';
+      }
+    });
+    this.updateBulkBar();
+  },
+
+  updateBulkBar() {
+    const bar = document.getElementById('bulkActionBar');
+    if (!bar) return;
+    const count = this.selectedIds.size;
+    bar.querySelector('.bulk-count').textContent = `${count}件選択中`;
+    bar.classList.toggle('visible', count > 0);
+  },
+
+  async bulkComplete() {
+    if (!this.selectedIds.size) return;
+    const ids = [...this.selectedIds];
+    for (const id of ids) {
+      const task = Store.tasks.find(t => t.id === id);
+      if (task && !task.is_completed) await Store.completeTask(id);
+    }
+    const count = ids.length;
+    this.exitBulkMode();
+    UI.updateBadges();
+    UI.toast(`${count}件のタスクを完了しました`, 'success');
+  },
+
+  async bulkDelete() {
+    if (!this.selectedIds.size) return;
+    const count = this.selectedIds.size;
+    if (!confirm(`${count}件のタスクを削除しますか？`)) return;
+    const ids = [...this.selectedIds];
+    for (const id of ids) await Store.deleteTask(id);
+    this.exitBulkMode();
+    UI.updateBadges();
+    UI.toast(`${count}件のタスクを削除しました`, 'info');
   },
 
   formatDueDate(d) {

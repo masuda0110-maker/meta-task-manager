@@ -259,6 +259,7 @@ const App = {
 
   /* ---- View Routing ---- */
   switchView(viewName, projectId = null) {
+    if (Tasks.bulkMode) Tasks.exitBulkMode();
     this.currentView = viewName;
     this.currentProjectId = projectId;
 
@@ -460,6 +461,20 @@ const App = {
       this.switchView('today');
       UI.toast('プロジェクトを削除しました', 'info');
     });
+
+    // Bulk select buttons
+    document.getElementById('todayBulkBtn')?.addEventListener('click', () => {
+      if (Tasks.bulkMode) Tasks.exitBulkMode(); else Tasks.enterBulkMode();
+    });
+    document.getElementById('projectBulkBtn')?.addEventListener('click', () => {
+      if (Tasks.bulkMode) Tasks.exitBulkMode(); else Tasks.enterBulkMode();
+    });
+
+    // Bulk action bar
+    document.getElementById('bulkSelectAllBtn')?.addEventListener('click', () => Tasks.selectAll());
+    document.getElementById('bulkCompleteBtn')?.addEventListener('click', () => Tasks.bulkComplete());
+    document.getElementById('bulkDeleteBtn')?.addEventListener('click', () => Tasks.bulkDelete());
+    document.getElementById('bulkCancelBtn')?.addEventListener('click', () => Tasks.exitBulkMode());
 
     // Modal close buttons
     document.querySelectorAll('[data-close]').forEach(btn => {

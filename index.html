@@ -283,7 +283,10 @@
     <section class="view hidden" id="view-today">
       <div class="view-header">
         <h2 class="view-title"><i class="fas fa-calendar-day"></i> 今日</h2>
-        <div class="view-meta" id="todayMeta"></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="view-meta" id="todayMeta"></div>
+          <button class="btn-ghost bulk-select-btn" id="todayBulkBtn" style="font-size:.8rem"><i class="fas fa-check-square"></i> 選択</button>
+        </div>
       </div>
       <div class="task-input-area" id="todayInputArea">
         <div class="task-input-row">
@@ -542,6 +545,7 @@
       <div class="view-header">
         <h2 class="view-title" id="projectViewTitle"></h2>
         <div class="project-actions">
+          <button class="btn-ghost bulk-select-btn" id="projectBulkBtn" style="font-size:.8rem"><i class="fas fa-check-square"></i> 選択</button>
           <button class="btn-ghost" id="editProjectBtn"><i class="fas fa-edit"></i></button>
           <button class="btn-ghost danger" id="deleteProjectBtn"><i class="fas fa-trash"></i></button>
         </div>
@@ -832,6 +836,15 @@
   <script src="js/nlp.js?v=20260402"></script>
   <script src="js/tasks.js?v=20260402"></script>
   <script src="js/wbs.js?v=20260402"></script>
+  <!-- ===== BULK ACTION BAR ===== -->
+  <div class="bulk-action-bar" id="bulkActionBar">
+    <span class="bulk-count">0件選択中</span>
+    <button class="bulk-btn ghost" id="bulkSelectAllBtn"><i class="fas fa-check-double"></i> 全選択</button>
+    <button class="bulk-btn success" id="bulkCompleteBtn"><i class="fas fa-check"></i> 完了</button>
+    <button class="bulk-btn danger" id="bulkDeleteBtn"><i class="fas fa-trash"></i> 削除</button>
+    <button class="bulk-btn ghost" id="bulkCancelBtn"><i class="fas fa-times"></i></button>
+  </div>
+
   <script src="js/metacog.js?v=20260402"></script>
   <script src="js/claude.js?v=20260403"></script>
   <script src="js/coach.js?v=20260402"></script>

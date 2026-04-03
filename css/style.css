@@ -1564,3 +1564,77 @@ select.modal-input { appearance: none; }
   /* コーチビューをフル幅に */
   .coach-container { flex-direction: column; }
 }
+
+/* ============================================================
+   BULK ACTION BAR
+   ============================================================ */
+.bulk-action-bar {
+  position: fixed;
+  bottom: -70px;
+  left: 0; right: 0;
+  background: var(--bg-sidebar);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 1.5rem;
+  height: 60px;
+  z-index: 200;
+  transition: bottom .25s ease;
+  box-shadow: 0 -4px 16px rgba(0,0,0,.2);
+}
+.bulk-action-bar.visible { bottom: 0; }
+.bulk-count {
+  flex: 1;
+  font-size: .85rem;
+  font-weight: 600;
+  color: rgba(255,255,255,.85);
+}
+.bulk-btn {
+  padding: .4rem .85rem;
+  border-radius: 8px;
+  font-size: .8rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  transition: background .15s;
+}
+.bulk-btn.success { background: #059669; color: #fff; }
+.bulk-btn.success:hover { background: #047857; }
+.bulk-btn.danger  { background: #dc2626; color: #fff; }
+.bulk-btn.danger:hover  { background: #b91c1c; }
+.bulk-btn.ghost   { background: rgba(255,255,255,.12); color: #fff; }
+.bulk-btn.ghost:hover   { background: rgba(255,255,255,.22); }
+
+/* ---- Task bulk selection ---- */
+.task-select-check {
+  width: 22px; height: 22px;
+  min-width: 22px;
+  border: 2px solid #d1d5db;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .6rem;
+  color: #fff;
+  margin-right: 2px;
+  flex-shrink: 0;
+  transition: background .15s, border-color .15s;
+}
+.task-select-check.checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.task-item.bulk-selected {
+  background: var(--accent-soft);
+  border-color: #93c5fd;
+}
+.bulk-select-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: #93c5fd;
+}
