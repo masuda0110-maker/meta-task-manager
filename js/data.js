@@ -9,6 +9,7 @@ const Store = {
   projects:    [],
   wbsNodes:    [],
   reflections: [],
+  goals:       [],
   settings:    {},
 
   /* ---- 初期化 ---- */
@@ -22,6 +23,7 @@ const Store = {
       const sbSettings = await SB.loadSettings();
       if (sbSettings?.data) {
         this.settings = { ...this.settings, ...sbSettings.data };
+        if (Array.isArray(sbSettings.data.goals)) this.goals = sbSettings.data.goals;
       }
     } else {
       this._loadFromLocal();
@@ -53,6 +55,7 @@ const Store = {
     this.projects    = JSON.parse(localStorage.getItem('mtm_projects')    || '[]');
     this.wbsNodes    = JSON.parse(localStorage.getItem('mtm_wbs')         || '[]');
     this.reflections = JSON.parse(localStorage.getItem('mtm_reflections') || '[]');
+    this.goals       = JSON.parse(localStorage.getItem('mtm_goals')       || '[]');
   },
 
   _saveLocal() {
@@ -60,6 +63,7 @@ const Store = {
     localStorage.setItem('mtm_projects',    JSON.stringify(this.projects));
     localStorage.setItem('mtm_wbs',         JSON.stringify(this.wbsNodes));
     localStorage.setItem('mtm_reflections', JSON.stringify(this.reflections));
+    localStorage.setItem('mtm_goals',       JSON.stringify(this.goals));
     localStorage.setItem('mtm_settings',    JSON.stringify(this.settings));
   },
 
@@ -257,6 +261,14 @@ const Store = {
   async saveSettings() {
     this._saveLocal();
     if (SB.isLoggedIn) {
+      await SB.saveSettings(this.settings).catch(() => {});
+    }
+  },
+
+  async saveGoals() {
+    this._saveLocal();
+    if (SB.isLoggedIn) {
+      this.settings.goals = this.goals;
       await SB.saveSettings(this.settings).catch(() => {});
     }
   },

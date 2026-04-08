@@ -187,6 +187,9 @@
         <li><a href="#" class="nav-item" data-view="upcoming">
           <i class="fas fa-calendar-week"></i><span>近日予定</span>
         </a></li>
+        <li><a href="#" class="nav-item" data-view="goals">
+          <i class="fas fa-bullseye"></i><span>目標ダッシュボード</span>
+        </a></li>
         <li><a href="#" class="nav-item" data-view="metacog">
           <i class="fas fa-brain"></i><span>メタ認知ダッシュボード</span>
           <span class="nav-badge" id="metacogBadge" style="display:none;background:var(--accent2)"></span>
@@ -321,6 +324,57 @@
       <div class="upcoming-list" id="upcomingList"></div>
     </section>
 
+    <!-- ========== VIEW: GOALS DASHBOARD ========== -->
+    <section class="view hidden" id="view-goals">
+      <div class="view-header">
+        <h2 class="view-title"><i class="fas fa-bullseye"></i> 目標ダッシュボード</h2>
+      </div>
+
+      <!-- 月次・週次 2カラム -->
+      <div class="goals-grid">
+
+        <!-- 今月の目標 -->
+        <div class="goals-panel">
+          <div class="goals-panel-header">
+            <div class="goals-panel-title">
+              <i class="fas fa-calendar-alt" style="color:#7c3aed"></i>
+              <span>今月の目標</span>
+              <span class="goals-period-label" id="monthlyPeriodLabel"></span>
+            </div>
+            <button class="btn-primary" id="addMonthlyGoalBtn" style="font-size:.8rem">
+              <i class="fas fa-plus"></i> 追加
+            </button>
+          </div>
+          <div id="monthlyGoalList" class="goal-list"></div>
+        </div>
+
+        <!-- 今週の目標 -->
+        <div class="goals-panel">
+          <div class="goals-panel-header">
+            <div class="goals-panel-title">
+              <i class="fas fa-calendar-week" style="color:#2563eb"></i>
+              <span>今週の目標</span>
+              <span class="goals-period-label" id="weeklyPeriodLabel"></span>
+            </div>
+            <button class="btn-primary" id="addWeeklyGoalBtn" style="font-size:.8rem">
+              <i class="fas fa-plus"></i> 追加
+            </button>
+          </div>
+          <div id="weeklyGoalList" class="goal-list"></div>
+        </div>
+
+      </div>
+
+      <!-- メタ認知との紐づき -->
+      <div class="goals-metacog-section">
+        <div class="goals-metacog-header">
+          <i class="fas fa-brain" style="color:#7c3aed"></i>
+          <span>メタ認知との紐づき</span>
+        </div>
+        <div id="goalsMetacogInsight"></div>
+      </div>
+    </section>
+
     <!-- ========== VIEW: METACOG DASHBOARD ========== -->
     <section class="view hidden" id="view-metacog">
       <div class="view-header">
@@ -359,6 +413,9 @@
         </div>
       </div>
 
+      <!-- 目標進捗パネル -->
+      <div id="mcGoalsSection"></div>
+
       <!-- 思考癖パネル -->
       <div class="mc-section-row">
         <div class="mc-panel" id="mcThinkingPatterns">
@@ -385,6 +442,37 @@
         <div id="mcLogList" class="mc-log-list"></div>
       </div>
     </section>
+
+  <!-- Goal Add/Edit Modal -->
+  <div class="modal-overlay hidden" id="goalModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 id="goalModalTitle"><i class="fas fa-bullseye"></i> 目標を追加</h3>
+        <button class="modal-close" data-close="goalModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="goalTypeHidden" value="monthly" />
+        <input type="hidden" id="goalEditIdHidden" value="" />
+        <div class="field-row">
+          <label>目標名</label>
+          <input type="text" id="goalTitleInput" class="modal-input" placeholder="例：読書を月4冊する" />
+        </div>
+        <div class="field-row">
+          <label>詳細・メモ（任意）</label>
+          <textarea id="goalDescInput" class="modal-textarea" placeholder="具体的な行動や補足メモ" style="height:70px"></textarea>
+        </div>
+        <div class="field-row">
+          <label>現在の進捗：<span id="goalProgressDisplay">0%</span></label>
+          <input type="range" id="goalProgressInput" min="0" max="100" step="10" value="0"
+            style="width:100%;accent-color:#2563eb" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" data-close="goalModal">キャンセル</button>
+        <button class="btn-primary" id="goalSaveBtn"><i class="fas fa-save"></i> 保存</button>
+      </div>
+    </div>
+  </div>
 
   <!-- MetaCog Entry Modal -->
   <div class="modal-overlay hidden" id="metacogEntryModal">
@@ -845,6 +933,7 @@
     <button class="bulk-btn ghost" id="bulkCancelBtn"><i class="fas fa-times"></i></button>
   </div>
 
+  <script src="js/goals.js?v=20260408"></script>
   <script src="js/metacog.js?v=20260402"></script>
   <script src="js/claude.js?v=20260403"></script>
   <script src="js/coach.js?v=20260402"></script>

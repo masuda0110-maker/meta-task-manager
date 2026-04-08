@@ -297,6 +297,7 @@ const MetaCog = {
     this.renderFocusTrendChart(logs);
     this.renderRadarChart(logs);
     this.renderTimeAccuracyChart(logs);
+    if (typeof Goals !== 'undefined') Goals.renderForMetacog();
     this.renderThinkingPatterns(logs);
     this.renderInsightsList(logs);
     this.renderLogList();

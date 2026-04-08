@@ -313,6 +313,9 @@ const App = {
       case 'upcoming':
         Tasks.renderUpcomingView();
         break;
+      case 'goals':
+        Goals.render();
+        break;
       case 'metacog':
         MetaCog.render();
         this.updateMetaCogBadge();
@@ -461,6 +464,10 @@ const App = {
       this.switchView('today');
       UI.toast('プロジェクトを削除しました', 'info');
     });
+
+    // Goals
+    document.getElementById('addMonthlyGoalBtn')?.addEventListener('click', () => Goals.openModal('monthly'));
+    document.getElementById('addWeeklyGoalBtn')?.addEventListener('click',  () => Goals.openModal('weekly'));
 
     // Bulk select buttons
     document.getElementById('todayBulkBtn')?.addEventListener('click', () => {
