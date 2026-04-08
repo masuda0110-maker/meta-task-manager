@@ -91,23 +91,42 @@ const SB = {
     const token   = localStorage.getItem('sb_token');
     const refresh = localStorage.getItem('sb_refresh');
     const user    = JSON.parse(localStorage.getItem('sb_user') || 'null');
-    if (!token || !refresh) return false;
 
-    // アクセストークンを使ってユーザー情報を取得（有効確認）
+    // トークンもユーザー情報もなければ未ログイン
+    if (!token || !refresh || !user?.id) return false;
+
+    // キャッシュされたセッションを即時復元（ネットワーク待ちなし）
+    this._token  = token;
+    this._user   = user;
+    this._userId = user.id;
+
+    // バックグラウンドでサイレント検証・更新
+    this._silentRefresh(token, refresh);
+
+    return true;
+  },
+
+  async _silentRefresh(token, refresh) {
     try {
       const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-        headers: this.headers({ Authorization: `Bearer ${token}` })
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${token}`
+        }
       });
       if (r.ok) {
-        this._token  = token;
-        this._user   = await r.json();
-        this._userId = this._user.id;
-        return true;
+        const user = await r.json();
+        this._user   = user;
+        this._userId = user.id;
+        localStorage.setItem('sb_user', JSON.stringify(user));
+        return;
       }
       // アクセストークン期限切れ → リフレッシュ
-      return await this.refreshToken(refresh);
+      await this.refreshToken(refresh);
     } catch {
-      return await this.refreshToken(refresh);
+      // ネットワークエラー時はリフレッシュを試みる
+      await this.refreshToken(refresh).catch(() => {});
     }
   },
 
