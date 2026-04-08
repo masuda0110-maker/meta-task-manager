@@ -94,6 +94,17 @@ const UI = {
     input.value = '';
     document.getElementById('quickParsePreview').innerHTML = '';
 
+    // Priority buttons
+    let selectedPriority = 'P3';
+    document.querySelectorAll('.qa-prio-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.prio === selectedPriority);
+      btn.onclick = () => {
+        selectedPriority = btn.dataset.prio;
+        document.querySelectorAll('.qa-prio-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      };
+    });
+
     // Fill selects
     document.getElementById('qaProject').innerHTML =
       '<option value="">なし</option>' + Store.projects.map(p =>
@@ -128,7 +139,7 @@ const UI = {
 
       await Store.addTask({
         title: parsed.title,
-        priority: parsed.priority,
+        priority: parsed.priority || selectedPriority,
         due_date: dueVal ? new Date(dueVal).toISOString() : parsed.due_date,
         project_id,
         estimated_minutes: parseInt(document.getElementById('qaEstimate').value) || parsed.estimated_minutes,

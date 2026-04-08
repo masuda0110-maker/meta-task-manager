@@ -1909,6 +1909,29 @@ select.modal-input { appearance: none; }
   background: var(--accent-soft);
   border-color: #93c5fd;
 }
+.qa-priority-row {
+  display: flex;
+  gap: 6px;
+}
+.qa-prio-btn {
+  flex: 1;
+  padding: .38rem 0;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
+  font-size: .8rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+  color: var(--text-muted);
+}
+.qa-prio-btn[data-prio="P1"].active { background: rgba(220,38,38,.1);  border-color: var(--p1); color: var(--p1); }
+.qa-prio-btn[data-prio="P2"].active { background: rgba(217,119,6,.1);  border-color: var(--p2); color: var(--p2); }
+.qa-prio-btn[data-prio="P3"].active { background: rgba(37,99,235,.1);  border-color: var(--p3); color: var(--p3); }
+.qa-prio-btn[data-prio="P4"].active { background: var(--bg-surface2);  border-color: var(--text-muted); color: var(--text-muted); }
+.qa-prio-btn:hover { border-color: var(--border-hover); }
+
 .bulk-select-btn.active {
   background: var(--accent-soft);
   color: var(--accent);
