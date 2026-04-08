@@ -457,9 +457,27 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   box-shadow: var(--shadow-sm);
 }
 
-/* Briefing cards */
+/* Briefing sections */
 .brief-panel { display: block; }
 .brief-panel.hidden { display: none; }
+.brief-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.2rem;
+  margin-bottom: .85rem;
+  box-shadow: var(--shadow-xs);
+}
+.brief-section h3 {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: .65rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.brief-section h3 i { font-size: .8rem; }
 .brief-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px,1fr)); gap: 1rem; margin-bottom: 1.2rem; }
 .brief-card {
   background: var(--bg-card);
