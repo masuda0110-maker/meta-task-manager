@@ -136,19 +136,50 @@ const SB = {
   get userId()     { return this._userId; },
   get userEmail()  { return this._user?.email || ''; },
 
+  /* ---- トークン自動更新（50分ごと） ---- */
+  startAutoRefresh() {
+    if (this._refreshTimer) clearInterval(this._refreshTimer);
+    this._refreshTimer = setInterval(async () => {
+      const refresh = localStorage.getItem('sb_refresh');
+      if (refresh && this.isLoggedIn) {
+        await this.refreshToken(refresh).catch(() => {});
+      }
+    }, 50 * 60 * 1000); // 50分
+  },
+
+  stopAutoRefresh() {
+    if (this._refreshTimer) { clearInterval(this._refreshTimer); this._refreshTimer = null; }
+  },
+
+  /* ---- 401時にリトライするラッパー ---- */
+  async _fetchWithRetry(url, options) {
+    let r = await fetch(url, options);
+    if (r.status === 401) {
+      const refresh = localStorage.getItem('sb_refresh');
+      if (refresh) {
+        const ok = await this.refreshToken(refresh);
+        if (ok) {
+          // 新しいトークンで再試行
+          options.headers = { ...options.headers, 'Authorization': `Bearer ${this._token}` };
+          r = await fetch(url, options);
+        }
+      }
+    }
+    return r;
+  },
+
   /* ---- データ CRUD ---- */
   async select(table, filter = '') {
     const url = `${SUPABASE_URL}/rest/v1/${table}?user_id=eq.${this._userId}&order=created_at.asc${filter ? '&' + filter : ''}`;
-    const r = await fetch(url, { headers: this.headers({ 'Prefer': 'return=representation' }) });
+    const r = await this._fetchWithRetry(url, { headers: this.headers({ 'Prefer': 'return=representation' }) });
     if (!r.ok) throw new Error(`SB select ${table} failed: ${r.status}`);
     return r.json();
   },
 
   async insert(table, data) {
     const row = { ...data, user_id: this._userId };
-    // id が local_ で始まる場合は除去して Supabase に採番させる
     if (row.id && String(row.id).startsWith('local_')) delete row.id;
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    const r = await this._fetchWithRetry(`${SUPABASE_URL}/rest/v1/${table}`, {
       method: 'POST',
       headers: this.headers({ 'Prefer': 'return=representation' }),
       body: JSON.stringify(row)
@@ -162,7 +193,7 @@ const SB = {
   },
 
   async update(table, id, patch) {
-    const r = await fetch(
+    const r = await this._fetchWithRetry(
       `${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}&user_id=eq.${this._userId}`,
       {
         method: 'PATCH',
@@ -176,7 +207,7 @@ const SB = {
   },
 
   async delete(table, id) {
-    const r = await fetch(
+    const r = await this._fetchWithRetry(
       `${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}&user_id=eq.${this._userId}`,
       { method: 'DELETE', headers: this.headers() }
     );

@@ -20,6 +20,7 @@ const App = {
         return; // Auth.onLogin() から startApp() が呼ばれる
       }
 
+      SB.startAutoRefresh();
       await this.startApp();
     } catch(err) {
       console.error('init error:', err);

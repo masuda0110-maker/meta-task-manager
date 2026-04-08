@@ -123,6 +123,7 @@ const Auth = {
         this._showSuccess('ログインしました！データを読み込んでいます…');
         setTimeout(() => {
           this.closeModal();
+          SB.startAutoRefresh();
           App.startApp();
         }, 800);
       } else {
